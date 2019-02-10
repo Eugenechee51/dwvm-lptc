@@ -15,4 +15,21 @@ braces        = Lexeme.braces        lexer
 integer       = Lexeme.integer       lexer -- parses an integer
 float         = Lexeme.float         lexer -- parses a float
 stringLiteral = Lexeme.stringLiteral lexer 
+stringLiteral = Lexeme.stringLiteral lexer
+whiteSpace    = Lexeme.whiteSpace    lexer
+
+int :: Parser Int
+int = fromInteger <$> Lexeme.integer lexer
+
+tabsSpaces :: Parser ()
+tabsSpaces = skipMany $ oneOf "\t "
+
+varDefine :: Parser String
+varDefine = do
+   spaces
+   id <- identifier
+   spaces
+   char '='
+   spaces
+   return id
 
