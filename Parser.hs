@@ -1,8 +1,12 @@
-module Parser where
+{-# LANGUAGE FlexibleContexts #-}
+module Parser (asTree) where
 
 import Grammar
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Language
+import Text.Parsec.Expr
+import Text.Parsec.Char
+import qualified Data.Map as Map
 import qualified Text.ParserCombinators.Parsec.Token as Lexeme
 
 lexer         = Lexeme.makeTokenParser languageDef    --lexical analyzer
@@ -17,20 +21,20 @@ commaSep      = Lexeme.commaSep      lexer
 integer       = Lexeme.integer       lexer -- parses an integer
 float         = Lexeme.float         lexer -- parses a float
 stringLiteral = Lexeme.stringLiteral lexer
-whiteSpace    = Lexeme.whiteSpace    lexer
+wSpace        = Lexeme.whiteSpace    lexer
 
-GetKey :: Eq b => b -> Map.Map c b -> c
-GetKey v = fst . head . Map.assocs . (Map.filter (==v))
+getKey :: Eq b => b -> Map.Map c b -> c
+getKey v = fst . head . Map.assocs . (Map.filter (==v))
 
 int :: Parser Int
 int = fromInteger <$> integer
 
-Value :: Eq a => Map.Map String a -> a -> Parser String
-Value m v = try (whiteSpace *> string (GetKey v m) <* whiteSpace)
+mapValue :: Eq a => Map.Map String a -> a -> Parser String
+mapValue m v = try (spaces *> string (getKey v m) <* spaces)
 
-unOp op = Prefix $ UnExpr op <$ (mapValueBetweenSpaces unaryOperations op)
+unOp op = Prefix $ UnaryExpression op <$ (mapValue unaryOperations op)
 
-binOp op = Infix (BinExpr op <$ (mapValueBetweenSpaces binaryOperations op)) AssocLeft
+binOp op = Infix (BinaryExpression op <$ (mapValue binaryOperations op)) AssocLeft
 
 opers = [[unOp Not, unOp Neg],
         [binOp Mul, binOp Div],
@@ -39,65 +43,77 @@ opers = [[unOp Not, unOp Neg],
         [binOp Eq, binOp NotE],
         [binOp And],[binOp Or]]
 
+funcCall :: Parser FuncCall
+funcCall = FuncCall <$> identifier <*> parens sepExpr
+
+expr :: Parser Expr
+expr = buildExpressionParser opers subExpr
+
 subExpr :: Parser Expr
-subExpr = parens exprParser
+subExpr = parens expr
             <|> FCall  <$> try funcCall
             <|> VCall  <$> identifier
             <|> IntLit <$> int
             <|> DblLit <$> try float
             <|> StrLit <$> stringLiteral
 
-exprParser :: Parser Expr
-exprParser = buildExpressionParser opers subExpr
+sepExpr :: Parser [Expr]
+sepExpr = commaSep expr
 
-SomeKey :: Map.Map String m -> Parser m
-SomeKey k = ((Map.!) k) <$> (choice . map string . Map.keys $ k)
+someKey :: Map.Map String m -> Parser m
+someKey k = ((Map.!) k) <$> (choice . map string . Map.keys $ k)
 
 buildType :: Parser Type
-buildType = SomeKey buildInTypes <?>
+buildType = someKey buildInTypes
 
 varDefinition :: Parser Var
-varDefinition = Var <$> buildType <* whiteSpace <*> identifier <?>
+varDefinition = Var <$> buildType <* wSpace <*> identifier 
 
 varAssignment :: Parser Stmt
-varAssignment = VarAssign <$> identifier <* char '=' <* whiteSpace <*> exprParser <?>
+varAssignment = VarAssign <$> identifier <* char '=' <* wSpace <*> expr
 
-statement :: Parser Statement
-statement = VarDef <$> varDefinition
+stmt :: Parser Stmt
+stmt = VarDef <$> varDefinition
          <|> varAssignment
          <|> FuncDef <$> function
-         <|> Return <$> (string "return" *> spaces *> expression)
-         <|> If
+         <|> Return <$> (string "return" *> spaces *> expr)
+         <|> iF
          <|> while
 
-lineSeparator = () <$ char ';'
-statementList = endBy1 statement lineSeparator
+lineSeparator :: Parser String
+lineSeparator = semi
 
-If :: Parser Stmt
-If = do
-    string "if"
-    spaces
-    ex <- parens exprParser
+statementList :: Parser [Stmt]
+statementList = endBy1 stmt lineSeparator
+
+iF :: Parser Stmt
+iF = do
+    _ <- string "if"
+    wSpace
+    ex <- parens expr
     sl <- braces statementList
-    exsl <- option [] (string "else" *> spaces *> braces statementList)
-    return $ If es sl exsl
+    exsl <- option [] (string "else" *> wSpace *> braces statementList)
+    return $ If ex sl exsl
 
 while :: Parser Stmt
 while = do
     string "while"
     spaces
-    ex <- parens exprParser
+    ex <- parens expr
     sl <- braces statementList
     return $ While ex sl
 
+typeVoid :: Parser (Maybe Type)
+typeVoid = Just <$> buildType <|> Nothing <$ string "void"
+
 function :: Parser Func
 function = do
-    t <- (Just <$> buildType <|> Nothing <$ string "void")
+    t <- typeVoid
     spaces
     n <- identifier
     args <- parens $ commaSep $ (,) <$> buildType <* spaces <*> identifier
     br <- braces statementList
     return $ Func t n args br
 
-ASTree :: Parser ASTree
-ASTree = many1 function
+asTree :: Parser ASTree
+asTree = many1 function

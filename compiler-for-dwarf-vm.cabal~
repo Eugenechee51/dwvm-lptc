@@ -19,7 +19,7 @@ extra-source-files:  CHANGELOG.md
 
 executable cdvm
   main-is:             Compiler.hs
-  other-modules: Parser, Grammar
+  -- other-modules: Parser Grammar
   -- other-extensions:
   build-depends:       base >=4.9 && <4.13, containers, parsec
   -- hs-source-dirs:
