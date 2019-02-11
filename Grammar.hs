@@ -9,10 +9,13 @@ data Type = Int | Double | String deriving Show
 
 data Var = Var { varType :: Type, varName :: String } deriving Show
 
+buildInTypes :: Map.Map String Type
+buildInTypes = Map.fromList [("int", Int), ("double", Double), ("string", String)]
+
 data UnaryOperation = Not | Neg deriving Show
 
-unOperations :: Map.Map String UnaryOperation
-unOperations = Map.fromList [("not", Not), ("-", Neg)]
+unaryOperations :: Map.Map String UnaryOperation
+unaryOperations = Map.fromList [("not", Not), ("-", Neg)]
 
 data BinaryOperation = And | Or | Eq | B | L | BE | LE | NotE | Sum | Sub | Mul | Div deriving Show
 
@@ -22,11 +25,11 @@ binaryOperations = Map.fromList [("and", And), ("or", Or),("==", Eq),
 				 ("<=", LE), ("!=", NotE),("+", Sum),
 				 ("-", Sub), ("*", Mul), ("/", Div)]
 
-data Func = Func { funcName :: String
-                         , args :: [(String, Type)]
-                         , returnType :: Maybe Type
-                         , statementList :: [Stmt]
-                         } deriving Show
+data Func = Func { returnType :: Type
+                 , funcName :: String
+                 , args :: [Var]
+                 , statementList :: [Stmt]
+                 } deriving Show
 
 data FuncCall = FuncCall String [Expr] deriving Show
 
@@ -41,12 +44,16 @@ deriving Show
 
 data Stmt = VarDef Var Expr
                | VarAssign String Expr
-               | FuncDef Function
+               | FuncDef Func
                | If Expr [Stmt] [Stmt]
                | While Expr [Stmt] 
                | Return (Maybe Expr)
                | FCall FuncCall
 deriving Show
+
+type ASTree = [Func]
+
+type FuncBody = [Stmt]
 
 	languageDef =
   emptyDef { Lexeme.identStart      = letter

@@ -9,6 +9,9 @@ data Type = Int | Double | String deriving Show
 
 data Var = Var { varType :: Type, varName :: String } deriving Show
 
+buildType :: Map.Map String Type
+buildType = Map.fromList [("int", Int), ("double", Double), ("string", String)]
+
 data UnaryOperation = Not | Neg deriving Show
 
 unOperations :: Map.Map String UnaryOperation
@@ -22,11 +25,11 @@ binaryOperations = Map.fromList [("and", And), ("or", Or),("==", Eq),
 				 ("<=", LE), ("!=", NotE),("+", Sum),
 				 ("-", Sub), ("*", Mul), ("/", Div)]
 
-data Func = Func { funcName :: String
-                         , args :: [(String, Type)]
-                         , returnType :: Maybe Type
-                         , statementList :: [Stmt]
-                         } deriving Show
+data Func = Func { returnType :: Maybe Type
+                 , funcName :: String
+                 , args :: [Var]
+                 , statementList :: [Stmt]
+                 } deriving Show
 
 data FuncCall = FuncCall String [Expr] deriving Show
 
@@ -47,6 +50,10 @@ data Stmt = VarDef Var Expr
                | Return (Maybe Expr)
                | FCall FuncCall
 deriving Show
+
+type AST = [Func]
+
+type FuncBody = [Stmt]
 
 	languageDef =
   emptyDef { Lexeme.identStart      = letter
