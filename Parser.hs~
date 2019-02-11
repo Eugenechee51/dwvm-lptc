@@ -64,9 +64,31 @@ varAssignment = VarAssign <$> identifier <* char '=' <* whiteSpace <*> exprParse
 
 statement :: Parser Statement
 statement = VarDef <$> varDefinition
+         <|> varAssignment
+         <|> FuncDef <$> function
+         <|> Return <$> (string "return" *> spaces *> expression)
+         <|> If
+         <|> while
 
 lineSeparator = () <$ char ';'
 statementList = endBy1 statement lineSeparator
+
+If :: Parser Stmt
+If = do
+    string "if"
+    spaces
+    ex <- parens exprParser
+    sl <- braces statementList
+    exsl <- option [] (string "else" *> spaces *> braces statementList)
+    return $ If es sl exsl
+
+while :: Parser Stmt
+while = do
+    string "while"
+    spaces
+    ex <- parens exprParser
+    sl <- braces statementList
+    return $ While ex sl
 
 function :: Parser Func
 function = do
