@@ -39,7 +39,6 @@ opers = [[unOp Not, unOp Neg],
         [binOp Eq, binOp NotE],
         [binOp And],[binOp Or]]
 
-
 subExpr :: Parser Expr
 subExpr = parens exprParser
             <|> FCall  <$> try funcCall
@@ -58,7 +57,25 @@ buildType :: Parser Type
 buildType = SomeKey buildInTypes <?>
 
 varDefinition :: Parser Var
-varDefinition = Var <$> SomeKey buildInTypes <* spaces <*> identifier <* char '=' <* spaces <*> exprParser
+varDefinition = Var <$> buildType <* whiteSpace <*> identifier <?>
 
 varAssignment :: Parser Stmt
-varAssignment = VarAssign <$> identifier <* char '=' <* whiteSpace <*> expression <?>
+varAssignment = VarAssign <$> identifier <* char '=' <* whiteSpace <*> exprParser <?>
+
+statement :: Parser Statement
+statement = VarDef <$> varDefinition
+
+lineSeparator = () <$ char ';'
+statementList = endBy1 statement lineSeparator
+
+function :: Parser Func
+function = do
+    t <- (Just <$> buildType <|> Nothing <$ string "void")
+    spaces
+    n <- identifier
+    args <- parens $ commaSep $ (,) <$> buildType <* spaces <*> identifier
+    br <- braces statementList
+    return $ Func t n args br
+
+ASTree :: Parser ASTree
+ASTree = many1 function
