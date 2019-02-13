@@ -28,7 +28,7 @@ getKey :: Eq b => b -> Map.Map c b -> c
 getKey v = fst . head . Map.assocs . (Map.filter (==v))
 
 int :: Parser Int
-int = (read <$> many1 digit) <* spaces
+int = fromInteger <$> integer
 
 mapValue :: Eq a => Map.Map String a -> a -> Parser String
 mapValue m v = try (spaces *> string (getKey v m) <* spaces)
@@ -52,7 +52,7 @@ expr = buildExpressionParser opers subExpr
 
 subExpr :: Parser Expr
 subExpr = parens expr
-       <|> try (FCall <$> funcCall)
+       <|> FCall   <$> try funcCall
        <|> VarCall <$> identifier
        <|> IntLit  <$> int
        <|> DblLit  <$> try float
@@ -68,7 +68,7 @@ buildType :: Parser Type
 buildType = someKey buildInTypes
 
 varDefinition :: Parser Var
-varDefinition = Var <$> buildType <* spaces <*> identifier <* char '=' <* spaces <*> expr 
+varDefinition = Var <$> buildType <* spaces <*> identifier
 
 varAssignment :: Parser Stmt
 varAssignment = VarAssign <$> identifier <* char '=' <* spaces <*> expr
@@ -110,7 +110,7 @@ function = do
     t <- typeVoid
     spaces
     n <- identifier
-    args <- parens $ commaSep $ (,) <$> buildType <* spaces <*> identifier
+    args <- parens $ commaSep $ Var <$> buildType <* spaces <*> identifier
     br <- braces statementList
     return $ Func t n args br
 

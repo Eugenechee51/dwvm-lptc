@@ -1,0 +1,36 @@
+module Translator where
+
+import Grammar (Var, Type, UnaryOperation, BinaryOperation, FunctionCall)
+import qualified Data.Map as Map
+
+--------------------Semantic analysis--------------------
+
+data Func = Func { returnType :: Maybe Type
+                 , funcName :: String
+                 , args :: [Var]
+                 , localVars :: [Var]
+                 , body :: FuncBody
+                 } deriving Show
+
+data Expr = IntLit Int
+          | DblLit Double
+          | StrLit String
+          | UnaryExpression UnaryOperation Expr
+          | BinaryExpression BinaryOperation Expr Expr
+          | FCall FunctionCall
+          | VarCall String deriving Show
+
+data Stmt = VarAssign  Expr
+          | If Expr [Stmt] [Stmt]
+          | While Expr [Stmt] 
+          | FuncCall FunctionCall
+          | Return (Maybe Expr) deriving Show
+
+data VarId = VarId { funcId :: Int
+                   , varId :: Int
+                   , isArg :: Bool
+                   } deriving Show
+
+type FuncBody = [Stmt]
+
+type TranslatedASTree = ([Func], [String])

@@ -7,7 +7,7 @@ import qualified Text.ParserCombinators.Parsec.Token as Lexeme
 
 data Type = Int | Double | String deriving Show
 
-data Var = Var { varType :: Type, varName :: String, initialValue :: Expr} deriving Show
+data Var = Var { varType :: Type, varName :: String} deriving Show
 
 buildInTypes = Map.fromList [("int", Int), ("double", Double), ("string", String)]
 
@@ -26,7 +26,7 @@ binaryOperations = Map.fromList [("and", And), ("or", Or),("==", Eq),
 
 data Func = Func { returnType :: Maybe Type
                  , funcName :: String
-                 , args :: [(Type, String)]
+                 , args :: [Var]
                  , body :: FuncBody
                  } deriving Show
 
@@ -69,3 +69,5 @@ languageDef =
             , Lexeme.reservedOpNames = Map.keys binaryOperations ++ Map.keys unaryOperations
                                        
             }
+
+
