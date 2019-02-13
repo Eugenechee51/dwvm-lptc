@@ -6,6 +6,7 @@ import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Language
 import Text.Parsec.Expr
 import Text.Parsec.Char
+import Data.Char(isSpace)
 import qualified Data.Map as Map
 import qualified Text.ParserCombinators.Parsec.Token as Lexeme
 
@@ -27,7 +28,10 @@ getKey :: Eq b => b -> Map.Map c b -> c
 getKey v = fst . head . Map.assocs . (Map.filter (==v))
 
 int :: Parser Int
-int = fromInteger <$> integer
+int = (read <$> many1 digit) <* spaces
+
+tabsSpaces :: Parser ()
+tabsSpaces = skipMany $ oneOf "\t "
 
 mapValue :: Eq a => Map.Map String a -> a -> Parser String
 mapValue m v = try (spaces *> string (getKey v m) <* spaces)
@@ -52,7 +56,7 @@ expr = buildExpressionParser opers subExpr
 subExpr :: Parser Expr
 subExpr = parens expr
             <|> FCall  <$> try funcCall
-            <|> VCall  <$> identifier
+            <|> VarCall  <$> identifier
             <|> IntLit <$> int
             <|> DblLit <$> try float
             <|> StrLit <$> stringLiteral
@@ -60,17 +64,17 @@ subExpr = parens expr
 sepExpr :: Parser [Expr]
 sepExpr = commaSep expr
 
-someKey :: Map.Map String m -> Parser m
-someKey k = ((Map.!) k) <$> (choice . map string . Map.keys $ k)
+someKey :: Map.Map String a -> Parser a
+someKey m = ((Map.!) m) <$> (choice . map string . Map.keys $ m)
 
 buildType :: Parser Type
 buildType = someKey buildInTypes
 
 varDefinition :: Parser Var
-varDefinition = Var <$> buildType <* wSpace <*> identifier 
+varDefinition = Var <$> buildType <* spaces <*> identifier <* char '=' <* spaces <*> expr 
 
 varAssignment :: Parser Stmt
-varAssignment = VarAssign <$> identifier <* char '=' <* wSpace <*> expr
+varAssignment = VarAssign <$> identifier <* char '=' <* spaces <*> expr
 
 stmt :: Parser Stmt
 stmt = VarDef <$> varDefinition
@@ -89,10 +93,10 @@ statementList = endBy1 stmt lineSeparator
 iF :: Parser Stmt
 iF = do
     _ <- string "if"
-    wSpace
+    spaces
     ex <- parens expr
     sl <- braces statementList
-    exsl <- option [] (string "else" *> wSpace *> braces statementList)
+    exsl <- option [] (string "else" *> spaces *> braces statementList)
     return $ If ex sl exsl
 
 while :: Parser Stmt

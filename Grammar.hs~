@@ -7,9 +7,8 @@ import qualified Text.ParserCombinators.Parsec.Token as Lexeme
 
 data Type = Int | Double | String deriving Show
 
-data Var = Var { varType :: Type, varName :: String } deriving Show
+data Var = Var { varType :: Type, varName :: String, initialValue :: Expr} deriving Show
 
-buildInTypes :: Map.Map String Type
 buildInTypes = Map.fromList [("int", Int), ("double", Double), ("string", String)]
 
 data UnaryOperation = Not | Neg deriving (Show, Eq)
@@ -39,7 +38,7 @@ data Expr = IntLit Int
           | UnaryExpression UnaryOperation Expr
           | BinaryExpression BinaryOperation Expr Expr
           | FCall FuncCall
-          | VCall String deriving Show
+          | VarCall String deriving Show
 
 data Stmt = VarDef Var
           | VarAssign String Expr
