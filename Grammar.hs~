@@ -30,14 +30,14 @@ data Func = Func { returnType :: Maybe Type
                  , body :: FuncBody
                  } deriving Show
 
-data FuncCall = FuncCall String [Expr] deriving Show
+data FunctionCall = FunctionCall String [Expr] deriving Show
 
 data Expr = IntLit Int
           | DblLit Double
           | StrLit String
           | UnaryExpression UnaryOperation Expr
           | BinaryExpression BinaryOperation Expr Expr
-          | FCall FuncCall
+          | FCall FunctionCall
           | VarCall String deriving Show
 
 data Stmt = VarDef Var
@@ -45,7 +45,8 @@ data Stmt = VarDef Var
           | FuncDef Func
           | If Expr [Stmt] [Stmt]
           | While Expr [Stmt] 
-          | Return Expr deriving Show
+          | FuncCall FunctionCall
+          | Return (Maybe Expr) deriving Show
 
 type FuncBody = [Stmt]
 

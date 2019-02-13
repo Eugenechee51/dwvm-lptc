@@ -30,9 +30,6 @@ getKey v = fst . head . Map.assocs . (Map.filter (==v))
 int :: Parser Int
 int = (read <$> many1 digit) <* spaces
 
-tabsSpaces :: Parser ()
-tabsSpaces = skipMany $ oneOf "\t "
-
 mapValue :: Eq a => Map.Map String a -> a -> Parser String
 mapValue m v = try (spaces *> string (getKey v m) <* spaces)
 
@@ -47,19 +44,19 @@ opers = [[unOp Not, unOp Neg],
         [binOp Eq, binOp NotE],
         [binOp And],[binOp Or]]
 
-funcCall :: Parser FuncCall
-funcCall = FuncCall <$> identifier <*> parens sepExpr
+funcCall :: Parser FunctionCall
+funcCall = FunctionCall <$> identifier <*> parens sepExpr
 
 expr :: Parser Expr
 expr = buildExpressionParser opers subExpr
 
 subExpr :: Parser Expr
 subExpr = parens expr
-            <|> FCall  <$> try funcCall
-            <|> VarCall  <$> identifier
-            <|> IntLit <$> int
-            <|> DblLit <$> try float
-            <|> StrLit <$> stringLiteral
+       <|> try (FCall <$> funcCall)
+       <|> VarCall <$> identifier
+       <|> IntLit  <$> int
+       <|> DblLit  <$> try float
+       <|> StrLit  <$> stringLiteral
 
 sepExpr :: Parser [Expr]
 sepExpr = commaSep expr
@@ -77,18 +74,16 @@ varAssignment :: Parser Stmt
 varAssignment = VarAssign <$> identifier <* char '=' <* spaces <*> expr
 
 stmt :: Parser Stmt
-stmt = VarDef <$> varDefinition
-         <|> varAssignment
-         <|> FuncDef <$> function
-         <|> Return <$> (string "return" *> spaces *> expr)
-         <|> iF
-         <|> while
-
-lineSeparator :: Parser String
-lineSeparator = semi
+stmt = try varAssignment
+    <|> VarDef <$> varDefinition
+    <|> try (FuncDef <$> function)
+    <|> FuncCall <$> funcCall
+    <|> Return <$> (string "return" *> spaces *> optionMaybe expr)
+    <|> try iF
+    <|> while
 
 statementList :: Parser [Stmt]
-statementList = endBy1 stmt lineSeparator
+statementList = endBy1 stmt spaces
 
 iF :: Parser Stmt
 iF = do
@@ -101,7 +96,7 @@ iF = do
 
 while :: Parser Stmt
 while = do
-    string "while"
+    _ <- string "while"
     spaces
     ex <- parens expr
     sl <- braces statementList
